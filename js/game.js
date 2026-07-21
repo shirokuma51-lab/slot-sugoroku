@@ -39,8 +39,10 @@ export const CONFIG = {
   matchBoostThird:  0.55, // 2つが既に同じ数字で停止している状態で3つ目を止めたとき、揃える確率
 
   // ---- 💀（強制終了シンボル）----
-  skullChance: 0.05,      // 各リールを止めたときに💀が出現する確率（5%）
-  skullTickChance: 0.06,  // 高速回転／減速中の表示にも演出として💀をたまに混ぜる確率
+  // 3リール中1つだけを毎スピンランダムに選び、そのリールでのみ💀が出現しうる
+  // （残り2リールには絶対に出ない）。これによりゲームオーバー確率を約1/3に抑えている。
+  skullChance: 0.05,      // 💀許可リールが実際に💀で停止する確率（5%）
+  skullTickChance: 0.06,  // 💀許可リールの回転中表示にも演出として💀をたまに混ぜる確率
 };
 
 const TILE_TYPE_ICON = {
@@ -53,9 +55,10 @@ const TILE_TYPE_ICON = {
 
 function randomFrom(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 
-/** 高速回転／減速中の「見た目だけ」の表示用（結果には影響しない）。演出として💀もたまに混ぜる */
-function randomTickSymbol(){
-  if(Math.random() < CONFIG.skullTickChance) return SKULL;
+/** 高速回転／減速中の「見た目だけ」の表示用（結果には影響しない）。
+ *  演出として💀もたまに混ぜるが、💀が出うるリール(isSkullEligible)以外では絶対に出さない。 */
+function randomTickSymbol(isSkullEligible){
+  if(isSkullEligible && Math.random() < CONFIG.skullTickChance) return SKULL;
   return randomFrom(CONFIG.reelSymbols);
 }
 
@@ -72,6 +75,7 @@ export const Game = (function(){
       { value: 1, spinning: false, stopped: true, intervalId: null },
     ],
     resolving: false,
+    skullReelIndex: null, // このスピンで💀が出うるリールの番号（null=未決定）
   };
 
   const luckyMeter = new LuckyMeter(10);
@@ -170,6 +174,9 @@ export const Game = (function(){
     state.coins -= CONFIG.spinCost;
     renderCoins();
 
+    // このスピンで💀が出る可能性があるリールを1つだけランダムに決める（残り2つには一切出ない）
+    state.skullReelIndex = Math.floor(Math.random() * state.reels.length);
+
     setSpinButtonEnabled(false);
     el.judgeBanner.className = 'judge-banner';
 
@@ -181,7 +188,7 @@ export const Game = (function(){
       el.stopBtns[idx].disabled = false;
 
       reel.intervalId = setInterval(()=>{
-        reel.value = randomTickSymbol();
+        reel.value = randomTickSymbol(idx === state.skullReelIndex);
         el.reelValues[idx].textContent = reel.value === SKULL ? '💀' : reel.value;
         Sound.spinTick();
       }, CONFIG.spinCycleInterval);
@@ -198,7 +205,7 @@ export const Game = (function(){
 
     let count = 0;
     const decel = setInterval(()=>{
-      reel.value = randomTickSymbol();
+      reel.value = randomTickSymbol(idx === state.skullReelIndex);
       el.reelValues[idx].textContent = reel.value === SKULL ? '💀' : reel.value;
       count++;
       if(count >= CONFIG.decelSteps){
@@ -215,7 +222,7 @@ export const Game = (function(){
    *   2) 💀でなければ、既に止まっている他のリールの数字に少し寄せて当たりやすくする
    */
   function pickFinalValue(idx){
-    if(Math.random() < CONFIG.skullChance) return SKULL;
+    if(idx === state.skullReelIndex && Math.random() < CONFIG.skullChance) return SKULL;
 
     const others = state.reels.filter((r,i)=> i!==idx && r.stopped && r.value !== SKULL);
     if(others.length === 2 && others[0].value === others[1].value){
@@ -419,6 +426,7 @@ export const Game = (function(){
     state.position = 1;
     state.gameOver = false;
     state.resolving = false;
+    state.skullReelIndex = null;
     state.tileEvents = generateTileEvents(CONFIG.boardSize, CONFIG.bonusTile, CONFIG.bonusAmount);
     luckyMeter.reset();
     state.reels.forEach(r=>{

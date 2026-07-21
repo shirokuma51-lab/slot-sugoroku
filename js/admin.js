@@ -19,7 +19,7 @@ import {
   subscribePasswordList, createPassword, updatePassword, deletePassword,
 } from './password.js';
 import { setupTabs, showToast, escapeHtml } from './ui.js';
-import { getTitleName } from './title.js';
+import { getTitleName, subscribeTitles } from './title.js';
 
 let unsubscribers = [];
 
@@ -114,38 +114,46 @@ function toDatetimeLocalValue(ts){
 
 function initPasswordPanel(){
   const unsub = subscribePasswordList((list)=>{
-    const container = document.getElementById('passwordList');
-    container.innerHTML = list.map(p=>`
-      <div class="password-row" data-id="${p.id}">
-        <div class="password-row-main">
-          <strong>${escapeHtml(p.code)}</strong>
-          <span>+${p.coinAmount}コイン</span>
-          <span>${p.currentUses||0}/${p.maxUses||'∞'}回</span>
-          <span class="${p.active ? 'badge-active':'badge-inactive'}">${p.active ? '有効':'無効'}</span>
-        </div>
-        <div class="password-row-actions">
-          <button class="pw-edit-btn">編集</button>
-          <button class="pw-delete-btn">削除</button>
-        </div>
-      </div>
-    `).join('') || '<div class="ranking-empty">登録されたあいことばはありません</div>';
-
-    container.querySelectorAll('.password-row').forEach(row=>{
-      const id = row.dataset.id;
-      const item = list.find(p=>p.id===id);
-      row.querySelector('.pw-edit-btn').addEventListener('click', ()=> openPasswordForm(item));
-      row.querySelector('.pw-delete-btn').addEventListener('click', async ()=>{
-        if(!confirm(`「${item.code}」を削除しますか？`)) return;
-        await deletePassword(id);
-        showToast('削除しました');
-      });
-    });
+    lastPasswordList = list;
+    renderPasswordList(list);
   });
   unsubscribers.push(unsub);
 
   document.getElementById('pwAddBtn').addEventListener('click', ()=> openPasswordForm(null));
   document.getElementById('pwFormCancelBtn').addEventListener('click', closePasswordForm);
   document.getElementById('pwForm').addEventListener('submit', onPasswordFormSubmit);
+}
+
+let lastPasswordList = [];
+
+function renderPasswordList(list){
+  const container = document.getElementById('passwordList');
+  container.innerHTML = list.map(p=>`
+    <div class="password-row" data-id="${p.id}">
+      <div class="password-row-main">
+        <strong>${escapeHtml(p.code)}</strong>
+        <span>+${p.coinAmount}コイン</span>
+        ${p.titleReward ? `<span class="badge-active">🏅${escapeHtml(getTitleName(p.titleReward))}</span>` : ''}
+        <span>${p.currentUses||0}/${p.maxUses||'∞'}回</span>
+        <span class="${p.active ? 'badge-active':'badge-inactive'}">${p.active ? '有効':'無効'}</span>
+      </div>
+      <div class="password-row-actions">
+        <button class="pw-edit-btn">編集</button>
+        <button class="pw-delete-btn">削除</button>
+      </div>
+    </div>
+  `).join('') || '<div class="ranking-empty">登録されたあいことばはありません</div>';
+
+  container.querySelectorAll('.password-row').forEach(row=>{
+    const id = row.dataset.id;
+    const item = list.find(p=>p.id===id);
+    row.querySelector('.pw-edit-btn').addEventListener('click', ()=> openPasswordForm(item));
+    row.querySelector('.pw-delete-btn').addEventListener('click', async ()=>{
+      if(!confirm(`「${item.code}」を削除しますか？`)) return;
+      await deletePassword(id);
+      showToast('削除しました');
+    });
+  });
 }
 
 let editingPasswordId = null;
@@ -155,6 +163,7 @@ function openPasswordForm(item){
   document.getElementById('pwFormTitle').textContent = item ? 'あいことば編集' : 'あいことば追加';
   document.getElementById('pwCode').value = item ? item.code : '';
   document.getElementById('pwCoinAmount').value = item ? item.coinAmount : 100;
+  document.getElementById('pwTitleName').value = item && item.titleReward ? getTitleName(item.titleReward) : '';
   document.getElementById('pwMaxUses').value = item ? (item.maxUses||0) : 0;
   document.getElementById('pwActive').checked = item ? !!item.active : true;
   document.getElementById('pwStartAt').value = item ? toDatetimeLocalValue(item.startAt) : '';
@@ -171,6 +180,7 @@ async function onPasswordFormSubmit(e){
   e.preventDefault();
   const code = document.getElementById('pwCode').value;
   const coinAmount = document.getElementById('pwCoinAmount').value;
+  const titleName = document.getElementById('pwTitleName').value;
   const maxUses = document.getElementById('pwMaxUses').value;
   const active = document.getElementById('pwActive').checked;
   const startVal = document.getElementById('pwStartAt').value;
@@ -178,7 +188,7 @@ async function onPasswordFormSubmit(e){
 
   const { Timestamp } = await import("https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js");
   const payload = {
-    code, coinAmount, maxUses, active,
+    code, coinAmount, maxUses, active, titleName,
     startAt: startVal ? Timestamp.fromDate(new Date(startVal)) : null,
     endAt: endVal ? Timestamp.fromDate(new Date(endVal)) : null,
   };
@@ -200,6 +210,10 @@ async function onPasswordFormSubmit(e){
 /* ============================================================ */
 function initDashboard(){
   setupTabs('.admin-tab-btn');
+  const titlesUnsub = subscribeTitles(()=>{
+    if(lastPasswordList.length) renderPasswordList(lastPasswordList);
+  });
+  unsubscribers.push(titlesUnsub);
   initStatsPanel();
   initRankingPanel();
   initPasswordPanel();

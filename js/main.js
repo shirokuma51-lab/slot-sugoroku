@@ -7,7 +7,7 @@ import {
   ensureProfile, subscribeProfile, updateUsername, updateCurrentTitle,
   updateBestScoreIfHigher, claimPendingCoins, USERNAME_MAX_LENGTH,
 } from './profile.js';
-import { TITLES, getTitleListForDisplay, getTitleName } from './title.js';
+import { TITLES, subscribeTitles, getTitleListForDisplay, getTitleName } from './title.js';
 import { ACHIEVEMENTS, checkAndUnlockAchievements } from './achievement.js';
 import { subscribeRanking, subscribeTopScore } from './ranking.js';
 import { redeemPassword } from './password.js';
@@ -21,6 +21,8 @@ import { Sound } from './sound.js';
 
 let currentUid = null;
 let currentProfile = null;
+let lastTopPlayer = null;
+let lastRankingList = null;
 
 /* ============================================================
    起動シーケンス
@@ -50,8 +52,16 @@ async function bootstrap(){
   });
   gameReady = true;
 
+  // あいことば由来の称号(titles/{id})を含む「称号名の解決」を常に最新に保つ。
+  // 更新が来るたびに、称号名を表示している箇所を再描画する。
+  subscribeTitles(()=>{
+    renderBestScoreBar(lastTopPlayer);
+    if(lastRankingList) renderRankingList(lastRankingList);
+    refreshProfileModalIfOpen();
+  });
+
   subscribeProfile(currentUid, onProfileSnapshot);
-  subscribeTopScore(renderBestScoreBar);
+  subscribeTopScore((topPlayer)=>{ lastTopPlayer = topPlayer; renderBestScoreBar(topPlayer); });
 
   // 別ページ（あいことば専用リンク等）で獲得済みだった未受取コインがあれば、
   // ゲーム画面を開いたこのタイミングで回収する。
@@ -235,7 +245,7 @@ function wireRankingModal(){
   if(openBtn) openBtn.addEventListener('click', ()=>{
     Sound.click();
     openModal('rankingModal');
-    if(!rankingUnsub) rankingUnsub = subscribeRanking(renderRankingList);
+    if(!rankingUnsub) rankingUnsub = subscribeRanking((list)=>{ lastRankingList = list; renderRankingList(list); });
   });
   if(closeBtn) closeBtn.addEventListener('click', ()=>{ Sound.click(); closeModal('rankingModal'); });
 }
@@ -280,6 +290,9 @@ async function onAikotobaSubmit(){
     closeModal('aikotobaModal');
     // 「◯◯コインを受け取りました」の通知は、直後に発火する pendingCoins の
     // 自動回収(claimAndApplyPendingCoins)側で1回だけ表示する（ここでは重複させない）。
+    if(result.titleId){
+      showToast(`称号「${getTitleName(result.titleId)}」を獲得しました！`, { title:'新しい称号！', variant:'achievement', duration:4200 });
+    }
   } else {
     Sound.passwordFail();
     showToast(result.message, { variant:'error' });
