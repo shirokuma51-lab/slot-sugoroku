@@ -25,10 +25,10 @@ const analytics = getAnalytics(app);
 // ============================================================
 
 export const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID",
+  apiKey: "AIzaSyBynp7DQihyLsh3W2IeNS5dLbfDgF2S_94",
+  authDomain: "slot-sugoroku.firebaseapp.com",
+  projectId: "slot-sugoroku",
+  storageBucket: "slot-sugoroku.firebasestorage.app",
+  messagingSenderId: "1:250192309861:web:2516180263fbeeae0aa08c",
+  appId: "1:250192309861:web:2516180263fbeeae0aa08c",
 };
