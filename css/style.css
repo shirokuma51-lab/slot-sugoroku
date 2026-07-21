@@ -18,6 +18,8 @@
 
 *{ box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
 
+button{ touch-action: manipulation; }
+
 html,body{
   margin:0; padding:0; width:100%; height:100%;
   font-family: "Trebuchet MS","Hiragino Maru Gothic ProN","Helvetica Neue",Arial,sans-serif;
@@ -493,11 +495,13 @@ html,body{
 .toast-container{
   position:fixed; top:14px; left:50%; transform:translateX(-50%);
   display:flex; flex-direction:column; gap:8px; z-index:120; width:min(92vw, 380px);
+  pointer-events:none; /* 通知が下の要素へのタップを奪わないようにする */
 }
 .toast-item{
   background: linear-gradient(180deg,#ffffff,#eaf4ff);
   border-radius: var(--radius-md); box-shadow: 0 10px 24px rgba(0,0,0,.3);
   padding:10px 14px; opacity:0; transform: translateY(-14px); transition: all .3s ease;
+  pointer-events:none; /* トースト自体もタップ操作を必要としないため */
 }
 .toast-item.show{ opacity:1; transform: translateY(0); }
 .toast-title{ font-weight:900; font-size:12px; color: var(--yellow-dark); letter-spacing:1px; margin-bottom:2px; }
