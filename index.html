@@ -90,6 +90,9 @@
       <label>実績</label>
       <ul class="achievement-list" id="profileAchievementList"></ul>
     </div>
+    <div class="field-group">
+      <button id="profileAikotobaBtn" style="border:none;cursor:pointer;width:100%;background:linear-gradient(180deg,#eafff0,#c9ffd9);color:#146c2e;font-weight:800;padding:11px;border-radius:14px;box-shadow:var(--glossy);font-size:13px;">🔑 あいことばを入力</button>
+    </div>
     <button class="primary-btn" id="profileSaveBtn">保存する</button>
   </div>
 </div>
@@ -102,6 +105,22 @@
       <button class="modal-close-btn" id="rankingCloseBtn">✕</button>
     </div>
     <div class="ranking-list" id="rankingList"></div>
+  </div>
+</div>
+
+<!-- ===================== あいことばモーダル ===================== -->
+<div class="modal-overlay" id="aikotobaModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2>🔑 あいことば入力</h2>
+      <button class="modal-close-btn" id="aikotobaCloseBtn">✕</button>
+    </div>
+    <div class="field-group">
+      <label>あいことば</label>
+      <input type="text" id="aikotobaInput" placeholder="あいことばを入力">
+      <div class="field-hint">同じあいことばは1人1回のみ使用できます</div>
+    </div>
+    <button class="primary-btn" id="aikotobaSubmitBtn">送信する</button>
   </div>
 </div>
 

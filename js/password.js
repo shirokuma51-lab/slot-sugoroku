@@ -82,7 +82,7 @@ export async function redeemPassword(uid, rawCode){
       return amount;
     });
 
-    return { success:true, coinAmount, message:`${coinAmount}コインを獲得しました！ ゲーム画面を開くと反映されます` };
+    return { success:true, coinAmount, message:`${coinAmount}コインを獲得しました！` };
   }catch(err){
     return { success:false, message: err.message || '引き換えに失敗しました' };
   }

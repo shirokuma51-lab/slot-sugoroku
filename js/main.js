@@ -10,6 +10,7 @@ import {
 import { TITLES, getTitleListForDisplay, getTitleName } from './title.js';
 import { ACHIEVEMENTS, checkAndUnlockAchievements } from './achievement.js';
 import { subscribeRanking, subscribeTopScore } from './ranking.js';
+import { redeemPassword } from './password.js';
 import {
   ensureGlobalStats, recordNewPlayer, recordPlayStart, recordSpinResult,
 } from './statistics.js';
@@ -38,6 +39,7 @@ async function bootstrap(){
   wireHud();
   wireProfileModal();
   wireRankingModal();
+  wireAikotobaModal();
   wireResetButton();
 
   Game.init({
@@ -155,9 +157,15 @@ function wireProfileModal(){
   const openBtn = document.getElementById('profileBtn');
   const closeBtn = document.getElementById('profileCloseBtn');
   const saveBtn = document.getElementById('profileSaveBtn');
+  const aikotobaBtn = document.getElementById('profileAikotobaBtn');
   if(openBtn) openBtn.addEventListener('click', ()=>{ Sound.click(); renderProfileModal(); openModal('profileModal'); });
   if(closeBtn) closeBtn.addEventListener('click', ()=>{ Sound.click(); closeModal('profileModal'); });
   if(saveBtn) saveBtn.addEventListener('click', onProfileSave);
+  if(aikotobaBtn) aikotobaBtn.addEventListener('click', ()=>{
+    Sound.click();
+    closeModal('profileModal');
+    openModal('aikotobaModal');
+  });
 }
 
 function refreshProfileModalIfOpen(){
@@ -250,6 +258,32 @@ function renderRankingList(list){
       </div>
     `;
   }).join('') || '<div class="ranking-empty">まだ記録がありません</div>';
+}
+
+/* ============================================================
+   あいことば（ゲーム画面内のモーダルから入力）
+============================================================ */
+function wireAikotobaModal(){
+  const closeBtn = document.getElementById('aikotobaCloseBtn');
+  const submitBtn = document.getElementById('aikotobaSubmitBtn');
+  if(closeBtn) closeBtn.addEventListener('click', ()=>{ Sound.click(); closeModal('aikotobaModal'); });
+  if(submitBtn) submitBtn.addEventListener('click', onAikotobaSubmit);
+}
+
+async function onAikotobaSubmit(){
+  const input = document.getElementById('aikotobaInput');
+  if(!input) return;
+  const result = await redeemPassword(currentUid, input.value);
+  if(result.success){
+    Sound.passwordSuccess();
+    input.value = '';
+    closeModal('aikotobaModal');
+    // 「◯◯コインを受け取りました」の通知は、直後に発火する pendingCoins の
+    // 自動回収(claimAndApplyPendingCoins)側で1回だけ表示する（ここでは重複させない）。
+  } else {
+    Sound.passwordFail();
+    showToast(result.message, { variant:'error' });
+  }
 }
 
 /* ============================================================
